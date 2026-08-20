@@ -1,0 +1,48 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build App (Unsigned)
+        run: |
+          # Build the project without signing
+          xcodebuild build \
+            -project "3dsGamepadConnector.xcodeproj" \
+            -scheme "3dsGamepadConnector" \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          # Create the Payload folder structure required for IPAs
+          mkdir Payload
+          # Move the built .app into the Payload folder
+          mv build/Build/Products/Release-iphoneos/*.app Payload/
+          # Zip it into an .ipa file
+          zip -r 3dsGamepadConnector.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3dsGamepadConnector-IPA
+          path: 3dsGamepadConnector.ipa
